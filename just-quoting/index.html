@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Just Quoting…</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e0e0e;
+      --card: #ffffff;
+      --text-dark: #111111;
+      --text-light: #f0efe8;
+      --accent: #f5c842;
+      --correct: #3ecf6e;
+      --wrong: #f04444;
+      --muted: #666;
+      --border: #2a2a2a;
+      --surface: #1a1a1a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text-light);
+      font-family: 'IBM Plex Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: min(980px, 100%);
+      flex-direction: column;
+      align-items: center;
+    }
+    .screen.active {
+      display: flex;
+      animation: fadeUp 0.35s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes popIn {
+      0%   { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+
+    .title-block { text-align: center; margin-bottom: 2.5rem; }
+
+    .game-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(4.5rem, 14vw, 8.5rem);
+      line-height: 0.88;
+      letter-spacing: 0.04em;
+      color: var(--text-light);
+    }
+    .game-title .dot { color: var(--accent); }
+
+    .game-tagline {
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 0.6rem;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .mode-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.6rem;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s, background 0.2s;
+      text-align: left;
+      min-height: 160px;
+    }
+    .mode-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+      background: #202020;
+    }
+    .mode-card:active { transform: translateY(0); }
+    .mode-card.wide {
+      grid-column: 1 / -1;
+      justify-self: center;
+      max-width: 720px;
+    }
+
+    .mode-emoji { font-size: 1.9rem; display: block; margin-bottom: 0.55rem; }
+    .mode-name {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-light);
+      letter-spacing: 0.02em;
+      margin-bottom: 0.25rem;
+    }
+    .mode-desc {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      line-height: 1.6;
+    }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .mode-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .round-counter { font-size: 0.65rem; color: var(--muted); }
+    .score-counter { font-size: 0.65rem; color: var(--muted); }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    .quote-card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 2.2rem 2.2rem 2rem;
+      width: 100%;
+      min-height: 170px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 1.25rem;
+    }
+    .quote-card.loading {
+      align-items: center;
+      justify-content: center;
+    }
+    .quote-mark {
+      font-family: 'Playfair Display', serif;
+      font-size: 4.5rem;
+      color: #e8e8e8;
+      line-height: 0.6;
+      position: absolute;
+      top: 1.4rem;
+      left: 1.6rem;
+      user-select: none;
+    }
+    .quote-text {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1rem, 2.4vw, 1.25rem);
+      line-height: 1.65;
+      color: var(--text-dark);
+      padding-top: 0.6rem;
+      position: relative;
+      z-index: 1;
+      animation: popIn 0.3s ease both;
+    }
+    .spinner {
+      width: 30px;
+      height: 30px;
+      border: 3px solid #ddd;
+      border-top-color: #999;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    .who-label {
+      font-size: 0.65rem;
+      text-align: center;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.85rem;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+      width: 100%;
+    }
+
+    .option-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      color: var(--text-light);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      padding: 1.1rem 0.9rem;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s, color 0.15s;
+      text-align: center;
+      line-height: 1.45;
+    }
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: #222;
+      transform: translateY(-2px);
+    }
+    .option-btn:active:not(:disabled) { transform: translateY(0); }
+    .option-btn:disabled { cursor: default; }
+
+    .option-btn.correct {
+      background: #0b2b18;
+      border-color: var(--correct);
+      color: var(--correct);
+    }
+    .option-btn.wrong {
+      background: #2b0b0b;
+      border-color: var(--wrong);
+      color: var(--wrong);
+    }
+    .option-btn.reveal {
+      background: #0b2b18;
+      border-color: var(--correct);
+      color: var(--correct);
+    }
+
+    .result-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 1.1rem;
+      min-height: 2.5rem;
+      gap: 0.75rem;
+    }
+    .result-msg {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      text-align: center;
+      animation: fadeUp 0.25s ease both;
+    }
+
+    .next-btn {
+      background: var(--accent);
+      color: var(--text-dark);
+      border: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 0.8rem 2.2rem;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+      display: none;
+      letter-spacing: 0.04em;
+    }
+    .next-btn:hover { background: #e0b530; transform: translateY(-1px); }
+    .next-btn.show { display: block; animation: fadeUp 0.25s ease both; }
+
+    .error-note {
+      font-size: 0.68rem;
+      color: var(--wrong);
+      text-align: center;
+    }
+
+    .end-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+    .end-score {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(5rem, 18vw, 9.5rem);
+      line-height: 0.88;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+    .end-mode {
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+      letter-spacing: 0.1em;
+    }
+
+    .roast-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.6rem;
+      width: 100%;
+      margin-top: 1.8rem;
+      text-align: center;
+    }
+    .roast-text {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--text-light);
+    }
+    .roast-byline {
+      font-size: 0.62rem;
+      color: var(--muted);
+      margin-top: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .end-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text-light);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.8rem 1.8rem;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+      letter-spacing: 0.04em;
+    }
+    .btn-outline:hover {
+      border-color: var(--text-light);
+      background: var(--surface);
+      transform: translateY(-1px);
+    }
+    .btn-solid {
+      background: var(--accent);
+      border: 2px solid var(--accent);
+      color: var(--text-dark);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.8rem 1.8rem;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+      letter-spacing: 0.04em;
+    }
+    .btn-solid:hover { background: #e0b530; transform: translateY(-1px); }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 1.5rem;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+      width: 100%;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+      width: 100%;
+    }
+
+    .quote-card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: clamp(1.6rem, 2.4vw, 2.4rem);
+      width: 100%;
+      min-height: clamp(170px, 26vh, 240px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 1.25rem;
+    }
+
+    .option-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      color: var(--text-light);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: clamp(0.78rem, 1vw, 0.95rem);
+      padding: clamp(1rem, 1.2vw, 1.2rem) 0.9rem;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s, color 0.15s;
+      text-align: center;
+      line-height: 1.45;
+      width: 100%;
+    }
+
+    .mode-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: clamp(1.2rem, 1.5vw, 1.6rem);
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s, background 0.2s;
+      text-align: left;
+    }
+
+    .title-block {
+      text-align: center;
+      margin-bottom: clamp(1.75rem, 4vw, 3rem);
+    }
+
+    .game-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(4rem, 12vw, 8.5rem);
+      line-height: 0.88;
+      letter-spacing: 0.04em;
+      color: var(--text-light);
+    }
+
+    .quote-text {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1rem, 2.4vw, 1.35rem);
+      line-height: 1.65;
+      color: var(--text-dark);
+      padding-top: 0.6rem;
+      position: relative;
+      z-index: 1;
+      animation: popIn 0.3s ease both;
+    }
+
+    @media (max-width: 850px) {
+      body {
+        padding: clamp(1rem, 3vw, 1.5rem);
+      }
+
+      .screen {
+        max-width: 720px;
+      }
+
+      .game-header {
+        justify-content: center;
+        text-align: center;
+      }
+
+      .game-header > * {
+        flex: 1 1 100%;
+      }
+
+      .mode-grid,
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mode-card,
+      .option-btn {
+        width: 100%;
+      }
+
+      .option-btn {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .game-title { font-size: clamp(3.2rem, 18vw, 5rem); }
+      .game-tagline { font-size: 0.74rem; }
+      .mode-desc { font-size: 0.72rem; }
+      .game-header { margin-bottom: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="home-screen" class="screen active">
+    <div class="title-block">
+      <div class="game-title">JUST<br>QUOTING<span class="dot">…</span></div>
+      <div class="game-tagline">Don't blame us. We're just quoting.</div>
+    </div>
+    <div class="mode-grid">
+      <div class="mode-card" onclick="startGame('yeOrNay')">
+        <span class="mode-emoji">🎤</span>
+        <div class="mode-name">Ye or Nay</div>
+        <div class="mode-desc">Kanye West vs. dead philosophers. Genuinely impossible.</div>
+      </div>
+      <div class="mode-card" onclick="startGame('oldAndUnhinged')">
+        <span class="mode-emoji">👴</span>
+        <div class="mode-name">Old &amp; Wise</div>
+        <div class="mode-desc">Founding Father vs. Recent President. One of these ran a country.</div>
+      </div>
+      <div class="mode-card wide" onclick="startGame('wooWoo')">
+        <span class="mode-emoji">🧘</span>
+        <div class="mode-name">Woo Woo</div>
+        <div class="mode-desc">Real human wisdom vs. AI word soup. Same difference.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="game-screen" class="screen">
+    <div class="game-header">
+      <div class="mode-label" id="mode-label">MODE</div>
+      <div class="score-counter" id="score-counter">0 correct</div>
+      <div class="round-counter" id="round-counter">Round 1 of 8</div>
+      <button class="btn-outline exit-btn" onclick="exitGame()">Exit</button>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="quote-card loading" id="quote-card">
+      <div class="spinner"></div>
+    </div>
+    <div class="who-label">Who said this?</div>
+    <div class="options-grid">
+      <button class="option-btn" id="btn-a" onclick="handleGuess(0)"> </button>
+      <button class="option-btn" id="btn-b" onclick="handleGuess(1)"> </button>
+    </div>
+    <div class="result-row">
+      <div class="result-msg" id="result-msg"></div>
+      <div class="error-note" id="error-note"></div>
+      <button class="next-btn" id="next-btn" onclick="nextRound()">Next →</button>
+    </div>
+  </div>
+
+  <div id="end-screen" class="screen">
+    <div class="end-label">Final Score</div>
+    <div class="end-score" id="end-score">0/8</div>
+    <div class="end-mode" id="end-mode"></div>
+    <div class="roast-card">
+      <div class="roast-text" id="roast-text"></div>
+      <div class="roast-byline">— Our official assessment</div>
+    </div>
+    <div class="end-actions">
+      <button class="btn-outline" onclick="replayMode()">Play Again (Same Mode)</button>
+      <button class="btn-solid"   onclick="goHome()">← All Modes</button>
+    </div>
+  </div>
+
+<script>
+const DATA = {
+  linkedin: [
+    "I don't build companies. I build legacies. The weak call it obsession. I call it vision.",
+    "I laid off 200 people today. Hardest thing I've ever done. Also the best thing I've ever done.",
+    "You're not tired. You're just not hungry enough.",
+    "I don't have competitors. I have people who haven't realized they've already lost.",
+    "Loyalty is a liability in business. I learned that the hard way.",
+    "The world wasn't built by people who slept 8 hours. Just saying.",
+    "If your vision doesn't make your team uncomfortable, it's not a vision. It's a suggestion.",
+    "I fired my top performer last week. Sometimes the problem isn't performance.",
+    "My 5am routine: meditate, visualize, dominate. In that order.",
+    "I'm not a disruptor. I'm just someone who refused to accept the world as it was.",
+    "Failure is just success that hasn't been monetized yet.",
+    "You don't need a work-life balance. You need a life that is your work.",
+  ],
+  villain: [
+    "The difference between a villain and a visionary is who writes the history.",
+    "They called me dangerous. I prefer the word thorough.",
+    "I don't want power. Power is a tool. I want results.",
+    "Every empire must be built on sacrifice. I simply choose not to hide that fact.",
+    "I am not the villain of this story. I am the author.",
+    "You can't build a better world without breaking the one you have.",
+    "Sentiment is a luxury I've never been able to afford.",
+    "Everyone who ever called me ruthless eventually called me right.",
+    "My methods are unconventional. My results are not.",
+    "I see the world not as it is, but as it should be. That is what terrifies them.",
+    "They called me a monster. I simply call myself ahead of schedule.",
+    "I don't need your forgiveness. I need your compliance.",
+  ],
+  philosopher: [
+    { q: "That which does not kill us makes us stronger.", a: "Nietzsche" },
+    { q: "God is dead. God remains dead. And we have killed him.", a: "Nietzsche" },
+    { q: "In individuals, insanity is rare; but in groups, parties, nations and epochs, it is the rule.", a: "Nietzsche" },
+    { q: "There is always some madness in love. But there is also always some reason in madness.", a: "Nietzsche" },
+    { q: "Man is something to be surpassed.", a: "Nietzsche" },
+    { q: "Hell is other people.", a: "Sartre" },
+    { q: "Man is condemned to be free.", a: "Sartre" },
+    { q: "We are our choices.", a: "Sartre" },
+    { q: "Life can only be understood backwards; but it must be lived forwards.", a: "Kierkegaard" },
+    { q: "The most common form of despair is not being who you are.", a: "Kierkegaard" },
+    { q: "Man can do what he wills but he cannot will what he wills.", a: "Schopenhauer" },
+    { q: "Talent hits a target no one else can hit; genius hits a target no one else can see.", a: "Schopenhauer" },
+    { q: "The unexamined life is not worth living.", a: "Socrates" },
+    { q: "I know that I know nothing.", a: "Socrates" },
+    { q: "Happiness is the meaning and the purpose of life, the whole aim and end of human existence.", a: "Aristotle" },
+  ],
+  foundingFather: [
+    "The tree of liberty must be refreshed from time to time with the blood of patriots and tyrants.",
+    "I hold it that a little rebellion now and then is a good thing, as necessary in the political world as storms in the physical.",
+    "The man who reads nothing at all is better educated than the man who reads nothing but newspapers.",
+    "Were it left to me to decide whether we should have a government without newspapers, or newspapers without a government, I should not hesitate to prefer the latter.",
+    "My only fear is that I may live too long.",
+    "I am an Epicurean. I consider the genuine doctrines of Epicurus as containing everything rational in moral philosophy.",
+    "Beer is living proof that God loves us and wants us to be happy.",
+    "If you would not be forgotten as soon as you are dead, either write something worth reading or do something worth writing.",
+    "I cannot live without books.",
+    "The harder the conflict, the greater the triumph.",
+    "In this world nothing can be said to be certain, except death and taxes.",
+    "Either write something worth reading or do something worth writing.",
+  ],
+  recentPresidents: [
+    "Read my lips: no new taxes.",
+    "This will not stand, this aggression against Kuwait.",
+    "I do not like broccoli.",
+    "I did not have sexual relations with that woman.",
+    "It's the economy, stupid.",
+    "There is nothing wrong with America that cannot be cured by what is right with America.",
+    "They misunderestimated me.",
+    "I know the human being and fish can coexist peacefully.",
+    "Our enemies are innovative and resourceful, and so are we.",
+    "Yes we can.",
+    "Change will not come if we wait for some other person or some other time. We are the ones we've been waiting for.",
+    "The best way to not feel hopeless is to get up and do something.",
+    "Make America Great Again.",
+    "It's going to be tremendous.",
+    "The wall just got 10 feet taller.",
+    "C'mon man!",
+    "Folks, we're in a situation here.",
+    "We're going to build back better.",
+  ],
+  aiNonsense: [
+    "You are a temporary arrangement of stardust, dreaming that it is you.",
+    "The present moment is not where you are. It is what you are.",
+    "Suffering is resistance to what is. What is, simply is. And yet.",
+    "Your wound is where the light enters you. Your scar is the light staying.",
+    "The universe is not punishing you. It is repositioning you for abundance.",
+    "There is no path to peace. Peace is the path, and also the destination, and also you.",
+    "What you seek is seeking you. What you find was already found by the finding.",
+    "Your highest self already knows. Your lowest self is simply the highest self in disguise.",
+    "The answer is inside the question. The question is inside the answer. Both are inside you.",
+    "You don't attract what you want. You attract what you are. Which is also what you want.",
+    "The river does not rush. The river does not wait. The river simply rivers.",
+    "When you stop chasing the wrong things, the right things find you and also you were them.",
+  ],
+};
+
+function normalizeQuote(quote) {
+  if (quote == null) return '';
+  if (typeof quote !== 'string') {
+    if (typeof quote.q === 'string') quote = quote.q;
+    else quote = String(quote);
+  }
+  return quote
+    .trim()
+    .toLowerCase()
+    .replace(/[.,;:!?"'“”‘’]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function randomItem(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function fillUniquePool(initial, targetSize, generator) {
+  const result = initial.slice();
+  const seen = new Set(result.map(item => normalizeQuote(item && item.q !== undefined ? item.q : item)));
+  let attempts = 0;
+
+  while (result.length < targetSize && attempts < targetSize * 20) {
+    const item = generator();
+    const rawQuote = item && item.q !== undefined ? item.q : item;
+    const normalized = normalizeQuote(rawQuote);
+    if (!normalized) {
+      attempts += 1;
+      continue;
+    }
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      result.push(item);
+    }
+    attempts += 1;
+  }
+
+  return result;
+}
+
+function generateBusinessQuote() {
+  const templates = [
+    "{subject} doesn't need permission to {verb} {object}.",
+    "If you want {object}, you have to {verb} with {adjective} {noun}.",
+    "The only thing more expensive than {noun} is not having {object}.",
+    "{subject} is not a hobby. It's how you {verb} the {object}.",
+    "This is not about effort. It's about {noun} and {verb} the right {object}.",
+    "You don't build a brand by waiting. You build it by {verb} the {object}.",
+    "The future belongs to people who {verb} the {object} with {adjective} {noun}.",
+    "Everyone talks about the vision. Few execute the {object}.",
+    "{subject} is not a status. It's a {noun}.",
+    "Dreams don't scale themselves. You {verb} them into the {object}.",
+  ];
+  const parts = {
+    subject: ["A founder", "A visionary", "Your team", "Leadership", "The mission", "This brand", "The strategy", "An entrepreneur"],
+    verb: ["scale", "monetize", "pivot", "execute", "dominate", "reinvent", "activate", "optimize", "elevate"],
+    object: ["the narrative", "the market", "the culture", "the system", "the opportunity", "the audience", "the product", "the moment"],
+    adjective: ["relentless", "ruthless", "intentional", "creative", "strategic", "fearless", "unapologetic", "disciplined"],
+    noun: ["momentum", "focus", "capital", "resilience", "clarity", "discipline", "velocity", "traction"],
+  };
+  const template = randomItem(templates);
+  return template.replace(/{(\w+)}/g, (_, key) => randomItem(parts[key] || ['']));
+}
+
+function generateVillainQuote() {
+  const templates = [
+    "Power doesn't ask for permission. It demands {object}.",
+    "I don't need your loyalty. I need your {noun}.",
+    "The weak cling to {object}. The strong rewrite {noun}.",
+    "When they call me ruthless, I hear {reaction}.",
+    "I prefer the word {adjective}. {subject} is the price of victory.",
+    "I don't negotiate with weakness. I {verb} {object}.",
+    "Your fear is my {noun}.",
+    "A true leader decides fate, not opinion.",
+    "They call me a monster because I deliver {object}.",
+    "I don't want your forgiveness. I want your {noun}.",
+  ];
+  const parts = {
+    object: ["control", "obedience", "fear", "respect", "secrets", "chaos", "silence", "compliance"],
+    noun: ["compliance", "order", "power", "advantage", "legacy", "destiny", "authority", "result"],
+    reaction: ["truth", "clarity", "business", "progress", "efficiency", "strength", "reality", "justice"],
+    adjective: ["decisive", "efficient", "unapologetic", "unwavering", "unpleasant", "practical", "relentless", "focused"],
+    subject: ["Sacrifice", "Silence", "Strategy", "Dominance", "Discipline", "Mercy", "Victory", "Power"],
+    verb: ["command", "conquer", "control", "execute", "extract", "shape"],
+  };
+  const template = randomItem(templates);
+  return template.replace(/{(\w+)}/g, (_, key) => randomItem(parts[key] || ['']));
+}
+
+function generatePhilosopherQuote() {
+  const templates = [
+    "{subject} is only {adjective} when it is {noun}.",
+    "We are not defined by what we {verb}, but by what we {object}.",
+    "The {noun} of {object} is the {adjective} of the soul.",
+    "To seek {object} is to accept the {noun} of {subject}.",
+    "A {noun} without {object} is merely {adjective}.",
+    "The {adjective} mind finds {object} in {noun}.",
+    "Your {noun} is shaped by the {object} you {verb}.",
+    "A {subject} without {noun} is a {adjective} life.",
+    "We are {verb} by the {object} we choose.",
+    "The {object} of {adjective} thought is deeper than {noun}.",
+  ];
+  const parts = {
+    subject: ["freedom", "reason", "existence", "thought", "truth", "conscience", "meaning", "being"],
+    verb: ["know", "choose", "fear", "embrace", "deny", "understand", "question", "create"],
+    object: ["meaning", "being", "choice", "time", "silence", "change", "reason", "beauty"],
+    noun: ["paradox", "struggle", "journey", "burden", "vision", "essence", "wisdom", "purpose"],
+    adjective: ["necessary", "unavoidable", "beautiful", "dangerous", "strange", "eternal", "quiet", "profound"],
+  };
+  const authors = ["Nietzsche", "Sartre", "Kierkegaard", "Schopenhauer", "Socrates", "Plato", "Aristotle", "Marcus Aurelius", "Epictetus", "Confucius", "Camus", "Simone de Beauvoir", "Heidegger", "Foucault", "Aquinas", "Hegel", "Seneca", "Buddha", "Rumi", "Lao Tzu"];
+  const template = randomItem(templates);
+  const quote = template.replace(/{(\w+)}/g, (_, key) => randomItem(parts[key] || ['']));
+  return { q: quote, a: randomItem(authors) };
+}
+
+function generateFoundingFatherQuote() {
+  const templates = [
+    "{subject} must be tempered by {noun}.",
+    "{noun} is the foundation of a {adjective} republic.",
+    "If we do not {verb} the {object}, we will lose {noun}.",
+    "The strength of our {noun} depends on {adjective} {object}.",
+    "There is no {noun} without {object}.",
+    "A {adjective} nation begins with {noun}.",
+    "The {object} of {subject} is the {noun} of posterity.",
+    "We must {verb} {object} with {adjective} {noun}.",
+    "Liberty thrives when {noun} meets {object}.",
+    "Without {noun}, there can be no {adjective} {subject}.",
+  ];
+  const parts = {
+    subject: ["Liberty", "Justice", "The people", "The republic", "The constitution", "The nation", "Our country", "Civilization"],
+    noun: ["freedom", "courage", "truth", "unity", "order", "honor", "virtue", "responsibility"],
+    adjective: ["steady", "firm", "wise", "patient", "modest", "sacred", "just", "strong"],
+    verb: ["protect", "defend", "preserve", "honor", "assemble", "support", "uphold", "cherish"],
+    object: ["law", "duty", "responsibility", "virtue", "history", "reason", "freedom", "independence"],
+  };
+  const template = randomItem(templates);
+  return template.replace(/{(\w+)}/g, (_, key) => randomItem(parts[key] || ['']));
+}
+
+function generateRecentPresidentQuote() {
+  const realQuotes = [
+    "Read my lips: no new taxes.",
+    "This will not stand, this aggression against Kuwait.",
+    "I do not like broccoli.",
+    "I did not have sexual relations with that woman.",
+    "It's the economy, stupid.",
+    "There is nothing wrong with America that cannot be cured by what is right with America.",
+    "They misunderestimated me.",
+    "I know the human being and fish can coexist peacefully.",
+    "Our enemies are innovative and resourceful, and so are we.",
+    "Yes we can.",
+    "Change will not come if we wait for some other person or some other time. We are the ones we've been waiting for.",
+    "The best way to not feel hopeless is to get up and do something.",
+    "Make America Great Again.",
+    "It's going to be tremendous.",
+    "The wall just got 10 feet taller.",
+    "C'mon man!",
+    "Folks, we're in a situation here.",
+    "We're going to build back better.",
+  ];
+  return randomItem(realQuotes);
+}
+
+function generateWooWooQuote() {
+  const templates = [
+    "The {noun} you seek is the {adjective} you carry.",
+    "If you {verb} the {object}, the {noun} will follow.",
+    "Your {noun} is a mirror of your {adjective} {object}.",
+    "The universe is not {adjective}. It is just {verb} the {object}.",
+    "To be {adjective} is to let the {noun} become your {object}.",
+    "The {noun} in your heart is louder than any outside {object}.",
+    "You are not lost. You are {adjective} in the {noun}.",
+    "Release the {object} and the {noun} will appear.",
+    "Every {noun} is a {object} disguised as a {adjective} lesson.",
+    "The {noun} of your being is the {object} of every {adjective} moment.",
+  ];
+  const parts = {
+    noun: ["light", "energy", "intention", "path", "frequency", "presence", "purpose", "heartbeat"],
+    adjective: ["aligned", "awake", "gentle", "clear", "expansive", "deep", "luminous", "peaceful"],
+    verb: ["trust", "release", "feel", "own", "follow", "honor", "receive", "flow"],
+    object: ["self", "flow", "rhythm", "moment", "spark", "field", "truth", "calm"],
+  };
+  const template = randomItem(templates);
+  return template.replace(/{(\w+)}/g, (_, key) => randomItem(parts[key] || ['']));
+}
+
+const TARGET_POOL_SIZE = 500;
+DATA.linkedin = fillUniquePool(DATA.linkedin, TARGET_POOL_SIZE, generateBusinessQuote);
+DATA.villain = fillUniquePool(DATA.villain, TARGET_POOL_SIZE, generateVillainQuote);
+DATA.philosopher = fillUniquePool(DATA.philosopher, TARGET_POOL_SIZE, generatePhilosopherQuote);
+DATA.foundingFather = fillUniquePool(DATA.foundingFather, TARGET_POOL_SIZE, generateFoundingFatherQuote);
+DATA.recentPresidents = fillUniquePool(DATA.recentPresidents, TARGET_POOL_SIZE, generateRecentPresidentQuote);
+DATA.aiNonsense = fillUniquePool(DATA.aiNonsense, TARGET_POOL_SIZE, generateWooWooQuote);
+
+const ROASTS = [
+  { max: 1, text: "You scored {s}/{t}. Truly remarkable. You've achieved something most people can't — you are statistically less reliable than a coin flip. We are genuinely in awe." },
+  { max: 3, text: "You scored {s}/{t}. You're exactly as confused as the quotes themselves. It's almost poetic. Almost." },
+  { max: 4, text: "You scored {s}/{t}. Below average. You'd probably also struggle to tell the difference between a TED Talk and a hostage negotiation. Which, fair." },
+  { max: 5, text: "You scored {s}/{t}. Exactly 50/50. A perfect testament to the fact that humans and villains are genuinely indistinguishable. Balanced, as all things should be." },
+  { max: 6, text: "You scored {s}/{t}. Decent. You've clearly spent too much time online, and it shows. We mean that as a compliment. Kind of." },
+  { max: 7, text: "You scored {s}/{t}. Very impressive. You are either deeply wise or dangerously terminally online. There is no in between." },
+  { max: 8, text: "You scored {s}/{t}. Perfect score. You can now identify unhinged statements by source. This is either your greatest skill or your most alarming one. Congrats." },
+];
+
+const CORRECT_LINES = [
+  "✅ Correct!! You got it.",
+  "✅ Right! Scary, isn't it?",
+  "✅ Yes! You really know your unhinged quotes.",
+  "✅ Correct. You have a gift. Or a problem.",
+];
+const WRONG_LINES = [
+  "❌ Nope. Completely wrong.",
+  "❌ Not even close. Embarrassing.",
+  "❌ Yikes. No.",
+  "❌ Wrong. And yet, understandable.",
+];
+
+const MODE_META = {
+  yeOrNay:        { label: '🎤 YE OR NAY' },
+  oldAndUnhinged: { label: '👴 OLD & WISE' },
+  wooWoo:         { label: '🧘 WOO WOO' },
+};
+
+const TOTAL_ROUNDS = 8;
+
+let state = { mode: null, round: 0, score: 0, correctIndex: 0, answered: false };
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function shuffle(a, b) {
+  return Math.random() < 0.5 ? [a, b, 0] : [b, a, 1];
+}
+
+function shuffleArray(array) {
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function loadSavedRecentQuotes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('justQuotingRecentQuotes') || '{}');
+    return {
+      yeOrNay: saved.yeOrNay || [],
+      oldAndUnhinged: saved.oldAndUnhinged || [],
+      wooWoo: saved.wooWoo || [],
+    };
+  } catch {
+    return { yeOrNay: [], oldAndUnhinged: [], wooWoo: [] };
+  }
+}
+
+function saveRecentQuotes() {
+  try {
+    localStorage.setItem('justQuotingRecentQuotes', JSON.stringify(state.recentQuotes));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function addRecentQuote(mode, quote) {
+  if (!quote || typeof quote !== 'string') return;
+  const recent = state.recentQuotes[mode] || [];
+  if (recent.includes(quote)) return;
+  recent.unshift(quote);
+  state.recentQuotes[mode] = recent.slice(0, 64);
+  saveRecentQuotes();
+}
+
+function recentSet(mode) {
+  return new Set(state.recentQuotes[mode] || []);
+}
+
+function buildDeck(mode) {
+  const deck = [];
+  const recent = recentSet(mode);
+
+  function pushQuotes(quotes, onPush) {
+    quotes.forEach(item => {
+      if (!recent.has(typeof item === 'string' ? item : item.q)) {
+        onPush(item);
+      }
+    });
+  }
+
+  function selectItems(quotes, count) {
+    const fresh = quotes.filter(item => {
+      const text = typeof item === 'string' ? item : item.q;
+      return !recent.has(text);
+    });
+    if (fresh.length >= count) return shuffleArray(fresh).slice(0, count);
+
+    const result = [...fresh];
+    for (let i = 0; i < quotes.length && result.length < count; i += 1) {
+      const item = quotes[i];
+      const text = typeof item === 'string' ? item : item.q;
+      const normalized = normalizeQuote(text);
+      const exists = result.some(existing => normalizeQuote(typeof existing === 'string' ? existing : existing.q) === normalized);
+      if (!exists) result.push(item);
+    }
+    return result.slice(0, count);
+  }
+
+  if (mode === 'yeOrNay') {
+    const philosopherQuotes = selectItems(DATA.philosopher, TOTAL_ROUNDS / 2);
+    const kanyeItems = Array.from({ length: TOTAL_ROUNDS / 2 }, () => ({ type: 'yeOrNay', source: 'kanye' }));
+
+    const maxLen = Math.max(philosopherQuotes.length, kanyeItems.length);
+    for (let i = 0; i < maxLen; i += 1) {
+      if (i < philosopherQuotes.length) {
+        deck.push({ type: 'yeOrNay', source: 'philosopher', quote: philosopherQuotes[i].q, author: philosopherQuotes[i].a });
+      }
+      if (i < kanyeItems.length) {
+        deck.push(kanyeItems[i]);
+      }
+    }
+  } else if (mode === 'oldAndUnhinged') {
+    const founderQuotes = selectItems(DATA.foundingFather, TOTAL_ROUNDS / 2);
+    const presidentQuotes = selectItems(DATA.recentPresidents, TOTAL_ROUNDS / 2);
+
+    const maxLen = Math.max(founderQuotes.length, presidentQuotes.length);
+    for (let i = 0; i < maxLen; i += 1) {
+      if (i < founderQuotes.length) {
+        deck.push({ type: 'oldAndUnhinged', quote: founderQuotes[i], source: 'foundingFather' });
+      }
+      if (i < presidentQuotes.length) {
+        deck.push({ type: 'oldAndUnhinged', quote: presidentQuotes[i], source: 'recentPresident' });
+      }
+    }
+  } else if (mode === 'wooWoo') {
+    const humanQuotes = selectItems(DATA.aiNonsense, TOTAL_ROUNDS / 2);
+    const inspirationalItems = Array.from({ length: TOTAL_ROUNDS / 2 }, () => ({ type: 'wooWoo', source: 'inspirational' }));
+
+    const maxLen = Math.max(humanQuotes.length, inspirationalItems.length);
+    for (let i = 0; i < maxLen; i += 1) {
+      if (i < humanQuotes.length) {
+        deck.push({ type: 'wooWoo', source: 'aiNonsense', quote: humanQuotes[i] });
+      }
+      if (i < inspirationalItems.length) {
+        deck.push(inspirationalItems[i]);
+      }
+    }
+  }
+
+  return shuffleArray(deck).slice(0, TOTAL_ROUNDS);
+}
+
+function generateKanyeFallbackQuote(recent) {
+  const templates = [
+    "I never lose. I either win or I rewrite the future.",
+    "Success is not an option. It's an outcome.",
+    "If they don't believe in your vision, make them believe in the results.",
+    "Haters are just confused fans in denial.",
+    "The world doesn't owe you anything. You create the world you get.",
+    "I'm not a rapper. I'm a visionary.",
+    "They said I was crazy. Now they're copying me.",
+    "I don't follow trends. I set them.",
+    "My mind is a weapon. My words are ammunition.",
+    "Creativity is intelligence having fun.",
+  ];
+  for (let i = 0; i < templates.length; i += 1) {
+    if (!recent.has(templates[i])) return templates[i];
+  }
+  return templates[0];
+}
+
+function generateInspirationalFallbackQuote(recent) {
+  const templates = [
+    "Your growth begins where your comfort zone ends.",
+    "Gratitude turns what you have into enough.",
+    "The present moment is a gift. That's why it's called the present.",
+    "Small steps taken daily lead to remarkable change.",
+    "You cannot discover new oceans unless you have the courage to lose sight of the shore.",
+    "The only way to do great work is to love what you do.",
+    "Believe you can and you're halfway there.",
+    "The best way to predict the future is to create it.",
+    "Your time is limited, so don't waste it living someone else's life.",
+    "The journey of a thousand miles begins with one step.",
+  ];
+  for (let i = 0; i < templates.length; i += 1) {
+    if (!recent.has(templates[i])) return templates[i];
+  }
+  return templates[0];
+}
+
+async function fetchUniqueKanyeQuote() {
+  const recent = new Set([...(state.recentQuotes?.yeOrNay || []), ...state.seenQuotes]);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const quote = await getKanyeQuote();
+    if (!recent.has(quote)) return quote;
+  }
+  return generateKanyeFallbackQuote(recent);
+}
+
+async function fetchUniqueInspirationalQuote() {
+  const recent = new Set([...(state.recentQuotes?.wooWoo || []), ...state.seenQuotes]);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const item = await getInspirationalQuote();
+    if (!recent.has(item.quote)) return item;
+  }
+  return { quote: generateInspirationalFallbackQuote(recent), author: 'Unknown' };
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setCardLoading(yes) {
+  const card = document.getElementById('quote-card');
+  if (yes) {
+    card.classList.add('loading');
+    card.innerHTML = '<div class="spinner"></div>';
+  } else {
+    card.classList.remove('loading');
+    card.innerHTML = '<div class="quote-mark">\u201C</div><div class="quote-text" id="quote-text"></div>';
+  }
+}
+
+async function getKanyeQuote() {
+  const res = await fetch('https://api.kanye.rest');
+  if (!res.ok) throw new Error('kanye api failed');
+  const d = await res.json();
+  return d.quote;
+}
+
+async function getInspirationalQuote() {
+  try {
+    const res = await fetch('https://api.quotable.io/quotes/random?tags=inspirational&maxLength=200');
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    const item = Array.isArray(d) ? d[0] : d;
+    if (item && item.content) return { quote: item.content, author: item.author };
+    throw new Error();
+  } catch {
+    try {
+      const res = await fetch('https://api.quotable.io/random?tags=inspirational&maxLength=200');
+      if (!res.ok) throw new Error();
+      const d = await res.json();
+      if (d && d.content) return { quote: d.content, author: d.author };
+      throw new Error();
+    } catch {
+      return pick([
+        { quote: "You are a spiritual being having a human experience.", author: "Deepak Chopra" },
+        { quote: "Every time you are tempted to react in the same old way, ask if you want to be a prisoner of the past or a pioneer of the future.", author: "Deepak Chopra" },
+        { quote: "In the midst of movement and chaos, keep stillness inside of you.", author: "Deepak Chopra" },
+        { quote: "Nothing is more important than reconnecting with your bliss.", author: "Deepak Chopra" },
+        { quote: "You must find the place inside yourself where nothing is impossible.", author: "Deepak Chopra" },
+      ]);
+    }
+  }
+}
+
+async function loadRound() {
+  state.answered = false;
+  setCardLoading(true);
+  document.getElementById('result-msg').textContent = '';
+  document.getElementById('error-note').textContent = '';
+  document.getElementById('next-btn').classList.remove('show');
+
+  const btnA = document.getElementById('btn-a');
+  const btnB = document.getElementById('btn-b');
+  btnA.className = 'option-btn'; btnA.disabled = false;
+  btnB.className = 'option-btn'; btnB.disabled = false;
+
+  document.getElementById('mode-label').textContent    = MODE_META[state.mode].label;
+  document.getElementById('round-counter').textContent = `Round ${state.round + 1} of ${TOTAL_ROUNDS}`;
+  document.getElementById('score-counter').textContent = `${state.score} correct`;
+  document.getElementById('progress-fill').style.width = `${(state.round / TOTAL_ROUNDS) * 100}%`;
+
+  try {
+    let quoteText, labelCorrect, labelWrong;
+    const roundItem = state.deck[state.round];
+
+    if (state.mode === 'yeOrNay') {
+      if (roundItem.source === 'kanye') {
+        if (!roundItem.quote) {
+          const quote = await fetchUniqueKanyeQuote();
+          roundItem.quote = quote;
+        }
+        quoteText    = roundItem.quote;
+        labelCorrect = 'Kanye West 🎤';
+        const ph     = pick(DATA.philosopher);
+        labelWrong   = `${ph.a} 📖`;
+      } else {
+        quoteText    = roundItem.quote;
+        labelCorrect = `${roundItem.author} 📖`;
+        labelWrong   = 'Kanye West 🎤';
+      }
+    }
+    else if (state.mode === 'oldAndUnhinged') {
+      quoteText = roundItem.quote;
+      btnA.textContent = 'Founding Father 👴';
+      btnB.textContent = 'Recent President 🇺🇸';
+      state.correctIndex = roundItem.source === 'foundingFather' ? 0 : 1;
+    }
+    else if (state.mode === 'wooWoo') {
+      if (roundItem.source === 'inspirational') {
+        if (!roundItem.quote) {
+          const item   = await fetchUniqueInspirationalQuote();
+          roundItem.quote = item.quote;
+        }
+        quoteText    = roundItem.quote;
+        labelCorrect = 'Real Human 🧘';
+        labelWrong   = 'AI Chatbot 🤖';
+      } else {
+        quoteText    = roundItem.quote;
+        labelCorrect = 'AI Chatbot 🤖';
+        labelWrong   = 'Real Human 🧘';
+      }
+    }
+
+    state.seenQuotes.add(quoteText);
+    addRecentQuote(state.mode, quoteText);
+
+    if (state.mode === 'oldAndUnhinged') {
+      // Buttons already set above, correctIndex has been assigned
+    } else {
+      const [textA, textB, correctIdx] = shuffle(labelCorrect, labelWrong);
+      state.correctIndex = correctIdx;
+      btnA.textContent = textA;
+      btnB.textContent = textB;
+    }
+
+    setCardLoading(false);
+    document.getElementById('quote-text').textContent = quoteText;
+
+  } catch (err) {
+    setCardLoading(false);
+    document.getElementById('error-note').textContent = "⚠️ Couldn't load quote. Hit next to try again.";
+    const nb = document.getElementById('next-btn');
+    nb.textContent = 'Try Again →';
+    nb.classList.add('show');
+  }
+}
+
+function startGame(mode) {
+  state.mode = mode;
+  state.round = 0;
+  state.score = 0;
+  state.correctIndex = 0;
+  state.answered = false;
+  state.seenQuotes = new Set();
+  state.recentQuotes = state.recentQuotes || loadSavedRecentQuotes();
+  state.deck = buildDeck(mode);
+  showScreen('game-screen');
+  loadRound();
+}
+
+function handleGuess(btnIndex) {
+  if (state.answered) return;
+  state.answered = true;
+
+  const btnA = document.getElementById('btn-a');
+  const btnB = document.getElementById('btn-b');
+  btnA.disabled = true;
+  btnB.disabled = true;
+
+  const isCorrect = (btnIndex === state.correctIndex);
+  const clicked   = btnIndex === 0 ? btnA : btnB;
+  const correct   = state.correctIndex === 0 ? btnA : btnB;
+
+  if (isCorrect) {
+    state.score++;
+    clicked.classList.add('correct');
+    document.getElementById('result-msg').textContent = pick(CORRECT_LINES);
+  } else {
+    clicked.classList.add('wrong');
+    correct.classList.add('reveal');
+    document.getElementById('result-msg').textContent = pick(WRONG_LINES);
+  }
+
+  document.getElementById('score-counter').textContent = `${state.score} correct`;
+  const nb = document.getElementById('next-btn');
+  nb.textContent = (state.round >= TOTAL_ROUNDS - 1) ? 'See Results →' : 'Next →';
+  nb.classList.add('show');
+}
+
+function nextRound() {
+  state.round++;
+  if (state.round >= TOTAL_ROUNDS) showEndScreen();
+  else loadRound();
+}
+
+function showEndScreen() {
+  showScreen('end-screen');
+  const s = state.score, t = TOTAL_ROUNDS;
+  document.getElementById('end-score').textContent = `${s}/${t}`;
+  document.getElementById('end-mode').textContent  = MODE_META[state.mode].label;
+  const roast = ROASTS.find(r => s <= r.max) || ROASTS[ROASTS.length - 1];
+  document.getElementById('roast-text').textContent = roast.text.replace('{s}', s).replace('{t}', t);
+  document.getElementById('progress-fill').style.width = '100%';
+}
+
+function replayMode() { startGame(state.mode); }
+function exitGame()  { state = { mode: null, round: 0, score: 0, correctIndex: 0, answered: false }; goHome(); }
+function goHome()      { showScreen('home-screen'); }
+</script>
+</body>
+</html>
