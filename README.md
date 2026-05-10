@@ -76,7 +76,7 @@ river does not wait, the river simply rivers." Good luck telling them apart.
 
 ## Live Site
 
-🔗(https://kmorgan37.github.io/Mini-Project-3/just-quoting/)
+🔗 https://kmorgan37.github.io/Mini-Project-3/just-quoting/
 
 ## Screenshot
 
